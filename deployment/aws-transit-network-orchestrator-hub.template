@@ -332,7 +332,7 @@ Mappings:
       RetentionPeriod: 90
   SourceCode:
     General:
-      S3Bucket: "stno-203494388058"
+      S3Bucket: "stno"
       KeyPrefix: "serverless-transit-network-orchestrator/custom001"
       S3Region: "cn-northwest-1"
       Version: "custom001"
@@ -741,7 +741,7 @@ Resources:
           METRICS_ENDPOINT: !FindInMap [Solution, Metrics, MetricsEndpoint]
           USER_AGENT_STRING: !Sub AwsSolution/SO0058/${!FindInMap ["SourceCode", "General", "Version"]}
       Code:
-        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !FindInMap ["SourceCode", "General", "S3Region"]]]
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::AccountId", !Ref "AWS::Region"]]
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"custom_resource.zip"]]
       FunctionName: STNO-Custom-Resource
       Description: AWS Serverless Transit Network Orchestrator - custom resource handler
@@ -823,8 +823,8 @@ Resources:
                 Action:
                   - "s3:GetObject"
                 Resource:
-                  - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::Region"]]
-                  - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::Region", "/*"]]
+                  - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::AccountId", "-", !Ref "AWS::Region"]]
+                  - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::AccountId", "-", !Ref "AWS::Region", "/*"]]
   
   PolicyIAMEC2:
     Type: AWS::IAM::Policy
@@ -955,7 +955,7 @@ Resources:
           USER_AGENT_STRING: !Sub AwsSolution/SO0058/${!FindInMap ["SourceCode", "General", "Version"]}
           SOLUTION_UUID: !GetAtt CreateUUID.UUID
       Code:
-        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], "cn-northwest-1"]]
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::AccountId", !Ref "AWS::Region"]]
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"state_machine.zip"]]
       FunctionName: STNO-State-Machine
       Description: AWS Serverless Transit Network Orchestrator - State Machine Handler
@@ -2011,7 +2011,7 @@ Resources:
           SOLUTION_ID: !FindInMap [Solution, Metrics, SolutionId]
           USER_AGENT_STRING: !Sub AwsSolution/SO0058/${!FindInMap ["SourceCode", "General", "Version"]}
       Code:
-        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"],"cn-northwest-1"]]
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::AccountId", !Ref "AWS::Region"]]
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"tgw_peering.zip"]]
       FunctionName: STNO-TGW-Peering
       Description: AWS Serverless Transit Network Orchestrator - TGW peering attachment handler
