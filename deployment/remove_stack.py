@@ -2,6 +2,8 @@ import boto3
 from optparse import OptionParser
 from botocore.exceptions import ClientError
 
+
+
 def disable_protection(client, stackname):
     '''disable stack Terminationprotection'''
     try:

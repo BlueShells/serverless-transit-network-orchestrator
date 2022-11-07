@@ -1,5 +1,6 @@
 
 
+from pydoc import cli
 from subprocess import check_output
 from zoneinfo import available_timezones
 from botocore.exceptions import ClientError
@@ -39,10 +40,38 @@ def delete_s3(session, delete_bucket):
             print(f"Bucket {options.bucket} does not exist in account {account_id} !!!")
         else:
             print(err)
-def delete_tgw(tgw_client, tgw_id):
-    response = tgw_client.delete_transit_gateway(
+def delete_tgw(client, tgw_id):
+    #1 get attach ments
+    attached_vpcs = get_attached_vpc(client, tgw_id)
+    #print(attached_vpcs)
+    
+    for attached_vpc in attached_vpcs['TransitGatewayVpcAttachments']:
+        print("atachme",attached_vpc['TransitGatewayAttachmentId'])
+        #2 remove vpc attachment
+        remove_attach_from_tgw(client, attached_vpc['TransitGatewayAttachmentId'])
+    response = client.delete_transit_gateway(
         TransitGatewayId=tgw_id
     )
+
+def get_attached_vpc(client, tgw_id):
+    response = client.describe_transit_gateway_vpc_attachments(
+        Filters=[
+            {
+                'Name': 'transit-gateway-id',
+                'Values': [
+                    tgw_id
+                ]
+            }
+        ],
+        MaxResults=123
+    )
+    return response
+
+def remove_attach_from_tgw(client, transitGatewayAttachment_id):
+    response = client.delete_transit_gateway_vpc_attachment(
+        TransitGatewayAttachmentId= transitGatewayAttachment_id
+    )
+    return response
 
 if __name__ == '__main__':
     usage = "Usage: \n%prog -p <aws-profile-name>"
@@ -85,7 +114,7 @@ if __name__ == '__main__':
     #print(tgwlist['TransitGateways'])
 
     for tgw in tgwlist['TransitGateways']:
-        print(tgw['TransitGatewayArn'])
+        print(f"going to delete: {tgw['TransitGatewayArn']}")
         tgw_name = ""
         tags = tgw['Tags']
         print(tags)
