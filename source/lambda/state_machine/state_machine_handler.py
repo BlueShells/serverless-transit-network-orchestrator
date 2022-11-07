@@ -2577,8 +2577,12 @@ class ResourceAccessManager:
             )
 
             # check if the accounts are in the organization
+            resource_share_arn = environ.get("RESOURCE_SHARE_ARN")
+            ou_arn = "arn:aws:organizations"
+            if "aws-cn" in resource_share_arn:
+                ou_arn = "arn:aws-cn:organizations"
             check_invitation_status = True
-            if "arn:aws:organizations" in environ.get("FIRST_PRINCIPAL"):
+            if ou_arn in environ.get("FIRST_PRINCIPAL"):
                 check_invitation_status = False
 
             # check the invitation status if the accounts are not in AWS Organization

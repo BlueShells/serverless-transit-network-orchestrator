@@ -28,6 +28,8 @@ def lambda_handler(event, context):
     logger.info("Entering custom resource lambda_handler")
     logger.debug(event)
 
+    partition = context.invoked_function_arn.split(":")[1]
+
     if event.get("source") == "aws.tag" or event.get("source") == "aws.ec2":
         trigger_sm(event, context)
 
@@ -36,7 +38,7 @@ def lambda_handler(event, context):
 
     elif event.get(
         "StackId"
-    ) is not None and "arn:aws:cloudformation" in event.get("StackId"):
+    ) is not None and f"arn:{partition}:cloudformation" in event.get("StackId"):
         cfn_handler(event, context)
 
     else:

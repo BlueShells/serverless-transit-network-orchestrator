@@ -116,19 +116,20 @@ def cfn_handler(event, context):
         "MESSAGE"
     ] = f"{event['RequestType']} for {event['ResourceType']}"
     logger.debug(str(log_message))
+    partition = context.invoked_function_arn.split(":")[1]
     try:
         if event["ResourceType"] == "Custom::CreateUUID":
             response_data = handle_uuid(event)
 
         if event["ResourceType"] == "Custom::CWEventPermissions":
-            handle_cwe_permissions(event)
+            handle_cwe_permissions(event, partition)
 
         if event["ResourceType"] == "Custom::ConsoleDeploy":
             s3_client = boto3.client("s3", config=boto3_config)
             ConsoleDeployment(s3_client, open, path.exists).deploy(event)
 
         if event["ResourceType"] == "Custom::GetPrefixListArns":
-            response_data = handle_prefix(event)
+            response_data = handle_prefix(event, partition)
 
         if event["ResourceType"] == "Custom::SendCFNParameters":
             handle_metrics(event)
@@ -169,7 +170,7 @@ def handle_uuid(event):
     return resp
 
 
-def handle_cwe_permissions(event):
+def handle_cwe_permissions(event, partition):
     """Handler for CloudWatch EventBridge permissions crud operations
 
     Args:
@@ -186,10 +187,10 @@ def handle_cwe_permissions(event):
     principal_list = properties.get("Principals")
     if request_type == "Create":
         for principal in principal_list:
-            cwe.put_permission(principal, event_bus_name)
+            cwe.put_permission(principal, event_bus_name, partition)
     if request_type == "Delete":
         for principal in principal_list:
-            cwe.remove_permission(principal, event_bus_name)
+            cwe.remove_permission(principal, event_bus_name, partition)
     if request_type == "Update":
         old_properties = event.get("OldResourceProperties")
         old_principal_list = old_properties.get("Principals")
@@ -202,7 +203,7 @@ def handle_cwe_permissions(event):
 
 
 
-def handle_prefix(event):
+def handle_prefix(event, partition):
     """Handles generating prefix list arns from prefix list
 
     Args:
@@ -228,7 +229,7 @@ def handle_prefix(event):
                 "provide at least one valid prefix list id."
             )
         for prefix_list_id in list_of_prefix_list_ids:
-            arn = f"arn:aws:ec2:{environ.get('AWS_REGION')}:{account_id}:prefix-list/{prefix_list_id}"
+            arn = f"arn:{partition}:ec2:{environ.get('AWS_REGION')}:{account_id}:prefix-list/{prefix_list_id}"
             list_of_prefix_list_arns.append(arn)
         response = {"PrefixListArns": list_of_prefix_list_arns}
     return response

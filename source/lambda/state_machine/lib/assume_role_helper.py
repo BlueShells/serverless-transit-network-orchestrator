@@ -19,8 +19,13 @@ class AssumeRole:
         try:
             sts = STS()
             role_name = "TransitNetworkExecutionRole"
+            resource_share_arn = environ.get("RESOURCE_SHARE_ARN")
+            role_arn_prefix = "arn:aws:iam::"
+            if "aws-cn" in resource_share_arn:
+                role_arn_prefix = "arn:aws-cn:iam::"
+
             role_arn = (
-                "arn:aws:iam::"
+                role_arn_prefix
                 + str(account)
                 + ":role/"
                 + role_name

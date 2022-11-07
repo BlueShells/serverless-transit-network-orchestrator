@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: (SO0058) - The AWS CloudFormation template (Hub) for deployment of the %SOLUTION_NAME% Solution. Version %VERSION%
+Description: (SO0058) - The AWS CloudFormation template (Hub) for deployment of the serverless-transit-network-orchestrator Solution. Version v3.1.1
 
 Parameters:
   Principals:
@@ -12,7 +12,6 @@ Parameters:
   PrincipalType:
     Type: String
     Description: Either provide list of accounts (comma separated) or AWS Organizations ARN
-    Default: 'List of Accounts'
     AllowedValues:
       - 'AWS Organization ARN'
       - 'List of Accounts'
@@ -29,6 +28,7 @@ Parameters:
     Type: 'String'
     Description: Email for the network administrator(s)
     AllowedPattern: '(^$|^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)'
+    Default: "awszzm@amazon.com"
 
   UserPoolUsernameForAdminUser:
     Description: Cognito UserPool ADMIN username used in the solution. The ADMIN user has full read and write permissions.
@@ -51,6 +51,7 @@ Parameters:
     Type: String
     MinLength: 1
     AllowedPattern: '^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    Default: "awszzm@amazon.com"
 
   AttachmentTag:
     Description: Custom tag key name to trigger the TGW VPC attachment workflow.
@@ -135,6 +136,7 @@ Parameters:
     Type: String
     AllowedPattern: ^$|^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
     Description: The prefix to the Cognito hosted domain name that will be associated with the user pool.
+    Default: "zzm"
 
   CognitoSAMLProviderNameParameter:
     Type: String
@@ -151,7 +153,7 @@ Parameters:
     Description: |
       Comma separated list of CIDR ranges that allow to console to access the API.
       To allow all the entire internet, use 0.0.0.0/1,128.0.0.0/1
-
+    Default: "0.0.0.0/1"
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -309,6 +311,10 @@ Mappings:
       AmazonSideAsn: 64539 # this must be changed by a network admin only
     sa-east-1:
       AmazonSideAsn: 64540 # this must be changed by a network admin only
+    cn-north-1:
+      AmazonSideAsn: 64541 # this must be changed by a network admin only
+    cn-northwest-1:
+      AmazonSideAsn: 64542 # this must be changed by a network admin only
   NotificationConfiguration:
     SNS:
       DisplayName: "AWS Transit Network Change Approval Notification"
@@ -326,9 +332,10 @@ Mappings:
       RetentionPeriod: 90
   SourceCode:
     General:
-      S3Bucket: "%DIST_BUCKET_NAME%"
-      KeyPrefix: "%SOLUTION_NAME%/%VERSION%"
-      Version: "%VERSION%"
+      S3Bucket: "stno-203494388058"
+      KeyPrefix: "serverless-transit-network-orchestrator/custom001"
+      S3Region: "cn-northwest-1"
+      Version: "custom001"
     Variables:
       WaitTime: "10"
       AllTraffic: "0.0.0.0/0"
@@ -734,7 +741,7 @@ Resources:
           METRICS_ENDPOINT: !FindInMap [Solution, Metrics, MetricsEndpoint]
           USER_AGENT_STRING: !Sub AwsSolution/SO0058/${!FindInMap ["SourceCode", "General", "Version"]}
       Code:
-        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !FindInMap ["SourceCode", "General", "S3Region"]]]
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"custom_resource.zip"]]
       FunctionName: STNO-Custom-Resource
       Description: AWS Serverless Transit Network Orchestrator - custom resource handler
@@ -940,7 +947,7 @@ Resources:
           RESOURCE_SHARE_ARN: !GetAtt TGWResourceShare.Arn
           METRICS_FLAG: !FindInMap ["Solution", "Metrics", "SendAnonymousData"]
           SOLUTION_VERSION: !FindInMap ["SourceCode", "General", "Version"]
-          STNO_CONSOLE_LINK: !Sub https://${ConsoleCloudFront.DomainName}
+          #STNO_CONSOLE_LINK: !Sub https://${ConsoleCloudFront.DomainName}
           VPC_TAGS_FOR_ATTACHMENT: !Ref ListOfVpcTagsForAttachment
           ORGANIZATION_ACCOUNT_ROLE_ARN: !Ref OrganizationManagementAccountRoleArn
           LOG_GROUP_FAILURES: !Ref CloudWatchLogFailures
@@ -948,7 +955,7 @@ Resources:
           USER_AGENT_STRING: !Sub AwsSolution/SO0058/${!FindInMap ["SourceCode", "General", "Version"]}
           SOLUTION_UUID: !GetAtt CreateUUID.UUID
       Code:
-        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], "cn-northwest-1"]]
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"state_machine.zip"]]
       FunctionName: STNO-State-Machine
       Description: AWS Serverless Transit Network Orchestrator - State Machine Handler
@@ -1029,8 +1036,8 @@ Resources:
                   - logs:PutLogEvents
                 Resource:
                   - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CloudWatchLogActions}*
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CloudWatchLogFailures}*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CloudWatchLogActions}*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${CloudWatchLogFailures}*
               - Effect: Allow
                 Action:
                   - sts:AssumeRole
@@ -2004,7 +2011,7 @@ Resources:
           SOLUTION_ID: !FindInMap [Solution, Metrics, SolutionId]
           USER_AGENT_STRING: !Sub AwsSolution/SO0058/${!FindInMap ["SourceCode", "General", "Version"]}
       Code:
-        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"],"cn-northwest-1"]]
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"tgw_peering.zip"]]
       FunctionName: STNO-TGW-Peering
       Description: AWS Serverless Transit Network Orchestrator - TGW peering attachment handler
@@ -2019,500 +2026,500 @@ Resources:
   # AWS Network Manager - Global Network #
   ########################################
 
-  GlobalNetworkSTNO:
-    Type: AWS::NetworkManager::GlobalNetwork
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Condition: CreateNewGlobalNetwork
-    Properties:
-      Description: !Sub Global Network created by Serverless Transit Network Solution deployed in ${AWS::Region}
-      Tags:
-        - Key: Name
-          Value: STNO-Global-Network
-        - Key: AWS Serverless Transit Network Orchestrator
-          Value: !Ref 'AWS::StackId'
+  # GlobalNetworkSTNO:
+  #   Type: AWS::NetworkManager::GlobalNetwork
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
+  #   Condition: CreateNewGlobalNetwork
+  #   Properties:
+  #     Description: !Sub Global Network created by Serverless Transit Network Solution deployed in ${AWS::Region}
+  #     Tags:
+  #       - Key: Name
+  #         Value: STNO-Global-Network
+  #       - Key: AWS Serverless Transit Network Orchestrator
+  #         Value: !Ref 'AWS::StackId'
 
-  GlobalNetworkRegistrationSTNO:
-    Type: AWS::NetworkManager::TransitGatewayRegistration
-    Condition: CreateNewGlobalNetwork&CreateNewTransitGateway
-    Properties:
-      GlobalNetworkId: !Ref GlobalNetworkSTNO
-      TransitGatewayArn: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:transit-gateway/${AWSTransitGateway}
+  # GlobalNetworkRegistrationSTNO:
+  #   Type: AWS::NetworkManager::TransitGatewayRegistration
+  #   Condition: CreateNewGlobalNetwork&CreateNewTransitGateway
+  #   Properties:
+  #     GlobalNetworkId: !Ref GlobalNetworkSTNO
+  #     TransitGatewayArn: !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:transit-gateway/${AWSTransitGateway}
 
   ############################
   # AWS AppSync API       #
   ############################
-  AppSyncPipelineApi:
-    Type: AWS::AppSync::GraphQLApi
-    Properties:
-      Name: STNOGraphQLAPI
-      AuthenticationType: AMAZON_COGNITO_USER_POOLS
-      UserPoolConfig:
-        UserPoolId:
-          Ref: STNOUserPool
-        AwsRegion:
-          Ref: AWS::Region
-        DefaultAction: DENY
-      LogConfig:
-        CloudWatchLogsRoleArn: !GetAtt AppSyncRole.Arn
-        ExcludeVerboseContent: False
-        FieldLogLevel: NONE
+  # AppSyncPipelineApi:
+  #   Type: AWS::AppSync::GraphQLApi
+  #   Properties:
+  #     Name: STNOGraphQLAPI
+  #     AuthenticationType: AMAZON_COGNITO_USER_POOLS
+  #     UserPoolConfig:
+  #       UserPoolId:
+  #         Ref: STNOUserPool
+  #       AwsRegion:
+  #         Ref: AWS::Region
+  #       DefaultAction: DENY
+  #     LogConfig:
+  #       CloudWatchLogsRoleArn: !GetAtt AppSyncRole.Arn
+  #       ExcludeVerboseContent: False
+  #       FieldLogLevel: NONE
 
-  STNOGraphQLApiWebACLAssociation:
-    Type: AWS::WAFv2::WebACLAssociation
-    Properties:
-      WebACLArn: !GetAtt STNOGraphQLApiWebACL.Arn
-      ResourceArn: !GetAtt AppSyncPipelineApi.Arn
+  # STNOGraphQLApiWebACLAssociation:
+  #   Type: AWS::WAFv2::WebACLAssociation
+  #   Properties:
+  #     WebACLArn: !GetAtt STNOGraphQLApiWebACL.Arn
+  #     ResourceArn: !GetAtt AppSyncPipelineApi.Arn
 
-  GraphQLSchema:
-    Type: "AWS::AppSync::GraphQLSchema"
-    Properties:
-      ApiId:
-        Fn::GetAtt:
-        - AppSyncPipelineApi
-        - ApiId
-      DefinitionS3Location: !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/schema.graphql"]]
+  # GraphQLSchema:
+  #   Type: "AWS::AppSync::GraphQLSchema"
+  #   Properties:
+  #     ApiId:
+  #       Fn::GetAtt:
+  #       - AppSyncPipelineApi
+  #       - ApiId
+  #     DefinitionS3Location: !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/schema.graphql"]]
 
 
   ############################
   # AWS AppSync Datasources  #
   ############################
-  DynamoDBSTNOTableDatasource:
-    Type: AWS::AppSync::DataSource
-    Properties:
-      Type: AMAZON_DYNAMODB
-      Name: STNO_DynamoDB_Datasource
-      ApiId:
-        Fn::GetAtt:
-        - "AppSyncPipelineApi"
-        - ApiId
-      ServiceRoleArn: !GetAtt AppSyncRole.Arn
-      DynamoDBConfig:
-        TableName:
-          Ref: DynamoDbTable
-        AwsRegion:
-          Ref: AWS::Region
-        UseCallerCredentials: FALSE
+  # DynamoDBSTNOTableDatasource:
+  #   Type: AWS::AppSync::DataSource
+  #   Properties:
+  #     Type: AMAZON_DYNAMODB
+  #     Name: STNO_DynamoDB_Datasource
+  #     ApiId:
+  #       Fn::GetAtt:
+  #       - "AppSyncPipelineApi"
+  #       - ApiId
+  #     ServiceRoleArn: !GetAtt AppSyncRole.Arn
+  #     DynamoDBConfig:
+  #       TableName:
+  #         Ref: DynamoDbTable
+  #       AwsRegion:
+  #         Ref: AWS::Region
+  #       UseCallerCredentials: FALSE
 
-  STNOLambdaDatasource:
-    Type: AWS::AppSync::DataSource
-    Properties:
-      Type: AWS_LAMBDA
-      Name: STNO_Lambda_Datasource
-      ApiId:
-        Fn::GetAtt:
-        - "AppSyncPipelineApi"
-        - ApiId
-      ServiceRoleArn: !GetAtt AppSyncRole.Arn
-      LambdaConfig:
-        LambdaFunctionArn: !GetAtt CustomResourceLambda.Arn
+  # STNOLambdaDatasource:
+  #   Type: AWS::AppSync::DataSource
+  #   Properties:
+  #     Type: AWS_LAMBDA
+  #     Name: STNO_Lambda_Datasource
+  #     ApiId:
+  #       Fn::GetAtt:
+  #       - "AppSyncPipelineApi"
+  #       - ApiId
+  #     ServiceRoleArn: !GetAtt AppSyncRole.Arn
+  #     LambdaConfig:
+  #       LambdaFunctionArn: !GetAtt CustomResourceLambda.Arn
 
   ############################
   # AWS AppSync Resolvers    #
   ############################
-  GetActionItemsResolver:
-    Type: "AWS::AppSync::Resolver"
-    DependsOn:
-    - GraphQLSchema
-    Properties:
-      ApiId: !GetAtt AppSyncPipelineApi.ApiId
-      TypeName: "Query"
-      FieldName: "getActionItemsFromTransitNetworkOrchestratorTables"
-      DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
-      RequestMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"], "/graphql/resolver/Query_GetActionItemsResolver_Request"]]
-      ResponseMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"], "/graphql/resolver/Query_GetActionItemsResolver_Response"]]
+  # GetActionItemsResolver:
+  #   Type: "AWS::AppSync::Resolver"
+  #   DependsOn:
+  #   - GraphQLSchema
+  #   Properties:
+  #     ApiId: !GetAtt AppSyncPipelineApi.ApiId
+  #     TypeName: "Query"
+  #     FieldName: "getActionItemsFromTransitNetworkOrchestratorTables"
+  #     DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
+  #     RequestMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"], "/graphql/resolver/Query_GetActionItemsResolver_Request"]]
+  #     ResponseMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"], "/graphql/resolver/Query_GetActionItemsResolver_Response"]]
 
 
-  GetDashboardItemsResolver:
-    Type: "AWS::AppSync::Resolver"
-    DependsOn:
-    - GraphQLSchema
-    Properties:
-      ApiId: !GetAtt AppSyncPipelineApi.ApiId
-      TypeName: "Query"
-      FieldName: "getDashboardItemsFromTransitNetworkOrchestratorTables"
-      DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
-      RequestMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetDashboardItemsResolver_Request"]]
-      ResponseMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetDashboardItemsResolver_Response"]]
+  # GetDashboardItemsResolver:
+  #   Type: "AWS::AppSync::Resolver"
+  #   DependsOn:
+  #   - GraphQLSchema
+  #   Properties:
+  #     ApiId: !GetAtt AppSyncPipelineApi.ApiId
+  #     TypeName: "Query"
+  #     FieldName: "getDashboardItemsFromTransitNetworkOrchestratorTables"
+  #     DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
+  #     RequestMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetDashboardItemsResolver_Request"]]
+  #     ResponseMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetDashboardItemsResolver_Response"]]
 
-  GetVersionHistoryResolver:
-    Type: "AWS::AppSync::Resolver"
-    DependsOn:
-    - GraphQLSchema
-    Properties:
-      ApiId: !GetAtt AppSyncPipelineApi.ApiId
-      TypeName: "Query"
-      FieldName: "getVersionHistoryForSubnetFromTransitNetworkOrchestratorTables"
-      DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
-      RequestMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetVersionHistoryResolver_Request"]]
-      ResponseMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetVersionHistoryResolver_Response"]]
+  # GetVersionHistoryResolver:
+  #   Type: "AWS::AppSync::Resolver"
+  #   DependsOn:
+  #   - GraphQLSchema
+  #   Properties:
+  #     ApiId: !GetAtt AppSyncPipelineApi.ApiId
+  #     TypeName: "Query"
+  #     FieldName: "getVersionHistoryForSubnetFromTransitNetworkOrchestratorTables"
+  #     DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
+  #     RequestMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetVersionHistoryResolver_Request"]]
+  #     ResponseMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/resolver/Query_GetVersionHistoryResolver_Response"]]
 
 
-  UpdateDDBTableResolver:
-    Type: AWS::AppSync::Resolver
-    Properties:
-      ApiId: !GetAtt AppSyncPipelineApi.ApiId
-      TypeName: "Mutation"
-      FieldName: "updateTransitNetworkOrchestratorTable"
-      RequestMappingTemplate: |
-        {}
-      ResponseMappingTemplate: |
-        $util.toJson($ctx.result)
-      Kind: "PIPELINE"
-      PipelineConfig:
-        Functions:
-        - !GetAtt UpdateDDBTableAppSyncFunction.FunctionId
-        - !GetAtt LambdaAppSyncFunction.FunctionId
+  # UpdateDDBTableResolver:
+  #   Type: AWS::AppSync::Resolver
+  #   Properties:
+  #     ApiId: !GetAtt AppSyncPipelineApi.ApiId
+  #     TypeName: "Mutation"
+  #     FieldName: "updateTransitNetworkOrchestratorTable"
+  #     RequestMappingTemplate: |
+  #       {}
+  #     ResponseMappingTemplate: |
+  #       $util.toJson($ctx.result)
+  #     Kind: "PIPELINE"
+  #     PipelineConfig:
+  #       Functions:
+  #       - !GetAtt UpdateDDBTableAppSyncFunction.FunctionId
+  #       - !GetAtt LambdaAppSyncFunction.FunctionId
 
-  UpdateDDBTableAppSyncFunction:
-    Type: AWS::AppSync::FunctionConfiguration
-    Properties:
-      ApiId: !GetAtt AppSyncPipelineApi.ApiId
-      Name: "Mutation_updateTransitNetworkOrchestratorTable_Function"
-      Description: "Update DDB table: set status to processing"
-      DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
-      RequestMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/Mutation_UpdateDDBTableAppSyncFunction_Request"]]
-      ResponseMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/Mutation_UpdateDDBTableAppSyncFunction_Response"]]
-      FunctionVersion: "2018-05-29"
+  # UpdateDDBTableAppSyncFunction:
+  #   Type: AWS::AppSync::FunctionConfiguration
+  #   Properties:
+  #     ApiId: !GetAtt AppSyncPipelineApi.ApiId
+  #     Name: "Mutation_updateTransitNetworkOrchestratorTable_Function"
+  #     Description: "Update DDB table: set status to processing"
+  #     DataSourceName: !GetAtt DynamoDBSTNOTableDatasource.Name
+  #     RequestMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/Mutation_UpdateDDBTableAppSyncFunction_Request"]]
+  #     ResponseMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/Mutation_UpdateDDBTableAppSyncFunction_Response"]]
+  #     FunctionVersion: "2018-05-29"
 
-  LambdaAppSyncFunction:
-    Type: AWS::AppSync::FunctionConfiguration
-    Properties:
-      ApiId: !GetAtt AppSyncPipelineApi.ApiId
-      Name: "STNO_Lambda_Function"
-      Description: "Function to receive data from appsync to invoke downstream actions"
-      DataSourceName: !GetAtt STNOLambdaDatasource.Name
-      RequestMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/LambdaAppSyncFunction_Request"]]
-      ResponseMappingTemplateS3Location:
-        !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/LambdaAppSyncFunction_Response"]]
-      FunctionVersion: "2018-05-29"
+  # LambdaAppSyncFunction:
+  #   Type: AWS::AppSync::FunctionConfiguration
+  #   Properties:
+  #     ApiId: !GetAtt AppSyncPipelineApi.ApiId
+  #     Name: "STNO_Lambda_Function"
+  #     Description: "Function to receive data from appsync to invoke downstream actions"
+  #     DataSourceName: !GetAtt STNOLambdaDatasource.Name
+  #     RequestMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/LambdaAppSyncFunction_Request"]]
+  #     ResponseMappingTemplateS3Location:
+  #       !Join ["", ["s3://", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region", "/", !FindInMap ["SourceCode", "General", "KeyPrefix"],"/graphql/function/LambdaAppSyncFunction_Response"]]
+  #     FunctionVersion: "2018-05-29"
 
   ############################
   # Amazon Cognito User Pool #
   ############################
-  STNOUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      Schema:
-        - AttributeDataType: String
-          DeveloperOnlyAttribute: false
-          Mutable: false
-          Name: sub
-          Required: false
-          StringAttributeConstraints:
-            MaxLength: 2048
-            MinLength: 1
-        - AttributeDataType: String
-          DeveloperOnlyAttribute: false
-          Mutable: false
-          Name: custom:CognitoUserGr
-          Required: false
-          StringAttributeConstraints:
-            MaxLength: 256
-            MinLength: 1
-      AdminCreateUserConfig:
-                AllowAdminCreateUserOnly: true
-                InviteMessageTemplate:
-                  EmailSubject: !Sub "Serverless Transit Network Orchestrator Console Credentials (${AWS::Region})"
-                  EmailMessage:
-                    !Sub |
-                        <p>Here are your temporary login credentials for Serverless Transit Network Orchestrator Console: https://${ConsoleCloudFront.DomainName}</p>
-                        <p>
-                        Region: ${AWS::Region}<br />
-                        Username: <strong>{username}</strong><br />
-                        Temporary Password: <strong>{####}</strong>
-                        </p>
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 10
-          RequireLowercase: true
-          RequireNumbers: true
-          RequireSymbols: true
-          RequireUppercase: true
-          TemporaryPasswordValidityDays: 7
-      LambdaConfig:
-        Fn::If:
-          - FrontEndCognitoSAMLCondition
-          - PostConfirmation:
-              Fn::GetAtt:
-                - FrontEndCognitoTriggerFunction
-                - Arn
-          - { }
-      UserPoolAddOns:
-        AdvancedSecurityMode: ENFORCED
+  # STNOUserPool:
+  #   Type: AWS::Cognito::UserPool
+  #   Properties:
+  #     Schema:
+  #       - AttributeDataType: String
+  #         DeveloperOnlyAttribute: false
+  #         Mutable: false
+  #         Name: sub
+  #         Required: false
+  #         StringAttributeConstraints:
+  #           MaxLength: 2048
+  #           MinLength: 1
+  #       - AttributeDataType: String
+  #         DeveloperOnlyAttribute: false
+  #         Mutable: false
+  #         Name: custom:CognitoUserGr
+  #         Required: false
+  #         StringAttributeConstraints:
+  #           MaxLength: 256
+  #           MinLength: 1
+  #     AdminCreateUserConfig:
+  #               AllowAdminCreateUserOnly: true
+  #               InviteMessageTemplate:
+  #                 EmailSubject: !Sub "Serverless Transit Network Orchestrator Console Credentials (${AWS::Region})"
+  #                 EmailMessage:
+  #                   !Sub |
+  #                       <p>Here are your temporary login credentials for Serverless Transit Network Orchestrator Console: https://${ConsoleCloudFront.DomainName}</p>
+  #                       <p>
+  #                       Region: ${AWS::Region}<br />
+  #                       Username: <strong>{username}</strong><br />
+  #                       Temporary Password: <strong>{####}</strong>
+  #                       </p>
+  #     Policies:
+  #       PasswordPolicy:
+  #         MinimumLength: 10
+  #         RequireLowercase: true
+  #         RequireNumbers: true
+  #         RequireSymbols: true
+  #         RequireUppercase: true
+  #         TemporaryPasswordValidityDays: 7
+  #     LambdaConfig:
+  #       Fn::If:
+  #         - FrontEndCognitoSAMLCondition
+  #         - PostConfirmation:
+  #             Fn::GetAtt:
+  #               - FrontEndCognitoTriggerFunction
+  #               - Arn
+  #         - { }
+  #     UserPoolAddOns:
+  #       AdvancedSecurityMode: ENFORCED
 
 
-  UserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-      UserPoolId:
-        Ref: STNOUserPool
-      ClientName: "stno-app-client"
-      AllowedOAuthFlows:
-        - code
-      AllowedOAuthFlowsUserPoolClient: true
-      AllowedOAuthScopes:
-        - phone
-        - email
-        - openid
-        - profile
-        - aws.cognito.signin.user.admin
-      CallbackURLs:
-        - !Sub "https://${ConsoleCloudFront.DomainName}/"
-      GenerateSecret: false
-      LogoutURLs:
-        - !Sub "https://${ConsoleCloudFront.DomainName}/"
-      PreventUserExistenceErrors: ENABLED
-      RefreshTokenValidity: 1
-      SupportedIdentityProviders:
-        Fn::If:
-          - FrontEndCognitoSAMLCondition
-          - - COGNITO
-            - Ref: CognitoSAMLProviderNameParameter
-          - - COGNITO
+  # UserPoolClient:
+  #   Type: AWS::Cognito::UserPoolClient
+  #   Properties:
+  #     UserPoolId:
+  #       Ref: STNOUserPool
+  #     ClientName: "stno-app-client"
+  #     AllowedOAuthFlows:
+  #       - code
+  #     AllowedOAuthFlowsUserPoolClient: true
+  #     AllowedOAuthScopes:
+  #       - phone
+  #       - email
+  #       - openid
+  #       - profile
+  #       - aws.cognito.signin.user.admin
+  #     CallbackURLs:
+  #       - !Sub "https://${ConsoleCloudFront.DomainName}/"
+  #     GenerateSecret: false
+  #     LogoutURLs:
+  #       - !Sub "https://${ConsoleCloudFront.DomainName}/"
+  #     PreventUserExistenceErrors: ENABLED
+  #     RefreshTokenValidity: 1
+  #     SupportedIdentityProviders:
+  #       Fn::If:
+  #         - FrontEndCognitoSAMLCondition
+  #         - - COGNITO
+  #           - Ref: CognitoSAMLProviderNameParameter
+  #         - - COGNITO
 
-  UserPoolDomain:
-    Type: AWS::Cognito::UserPoolDomain
-    Properties:
-      Domain:
-        Ref: CognitoDomainPrefixParameter
-      UserPoolId:
-        Ref: STNOUserPool
+  # UserPoolDomain:
+  #   Type: AWS::Cognito::UserPoolDomain
+  #   Properties:
+  #     Domain:
+  #       Ref: CognitoDomainPrefixParameter
+  #     UserPoolId:
+  #       Ref: STNOUserPool
 
-  FrontEndCognitoSAMLProvider:
-    Type: AWS::Cognito::UserPoolIdentityProvider
-    Properties:
-      ProviderName:
-        Ref: CognitoSAMLProviderNameParameter
-      ProviderType: SAML
-      UserPoolId:
-        Ref: STNOUserPool
-      AttributeMapping:
-        email: email
-      ProviderDetails:
-        MetadataURL:
-          Ref: CognitoSAMLProviderMetadataUrlParameter
-    Condition: FrontEndCognitoSAMLCondition
+  # FrontEndCognitoSAMLProvider:
+  #   Type: AWS::Cognito::UserPoolIdentityProvider
+  #   Properties:
+  #     ProviderName:
+  #       Ref: CognitoSAMLProviderNameParameter
+  #     ProviderType: SAML
+  #     UserPoolId:
+  #       Ref: STNOUserPool
+  #     AttributeMapping:
+  #       email: email
+  #     ProviderDetails:
+  #       MetadataURL:
+  #         Ref: CognitoSAMLProviderMetadataUrlParameter
+  #   Condition: FrontEndCognitoSAMLCondition
 
   ############################
   # UserPool Cognito Trigger #
   ############################
-  FrontEndCognitoTriggerFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-        Version: "2012-10-17"
-      Path: /
-      Policies:
-        - PolicyDocument:
-            Statement:
-              - Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Effect: Allow
-                Resource:
-                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
-            Version: "2012-10-17"
-          PolicyName: CloudWatchLogsPolicy
-        - PolicyDocument:
-            Statement:
-              - Action:
-                  - cognito-idp:AdminAddUserToGroup
-                Effect: Allow
-                Resource:
-                  # referencing ReadOnlyUserPool instead of userpool/* creates a circular dependency
-                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:userpool/*
-            Version: "2012-10-17"
-          PolicyName: AddUserToReadOnlyUserGroupPolicy
-    Condition: FrontEndCognitoSAMLCondition
+  # FrontEndCognitoTriggerFunctionRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Statement:
+  #         - Action: sts:AssumeRole
+  #           Effect: Allow
+  #           Principal:
+  #             Service: lambda.amazonaws.com
+  #       Version: "2012-10-17"
+  #     Path: /
+  #     Policies:
+  #       - PolicyDocument:
+  #           Statement:
+  #             - Action:
+  #                 - logs:CreateLogGroup
+  #                 - logs:CreateLogStream
+  #                 - logs:PutLogEvents
+  #               Effect: Allow
+  #               Resource:
+  #                 - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+  #           Version: "2012-10-17"
+  #         PolicyName: CloudWatchLogsPolicy
+  #       - PolicyDocument:
+  #           Statement:
+  #             - Action:
+  #                 - cognito-idp:AdminAddUserToGroup
+  #               Effect: Allow
+  #               Resource:
+  #                 # referencing ReadOnlyUserPool instead of userpool/* creates a circular dependency
+  #                 - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:userpool/*
+  #           Version: "2012-10-17"
+  #         PolicyName: AddUserToReadOnlyUserGroupPolicy
+  #   Condition: FrontEndCognitoSAMLCondition
 
-  FrontEndCognitoTriggerFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"cognito-trigger.zip"]]
-      Role:
-        Fn::GetAtt:
-          - FrontEndCognitoTriggerFunctionRole
-          - Arn
-      Description: "AWS STNO Solution (%VERSION%): Cognito Trigger. Used when a new user is confirmed in the user pool to allow for custom actions to be taken"
-      Environment:
-        Variables:
-          LOG_LEVEL: !FindInMap [LambdaFunction, Logging, Level]
-          SOLUTION_ID: !FindInMap [Solution, Metrics, SolutionId]
-          SOLUTION_VERSION: !FindInMap [SourceCode, General, Version]
-      Handler: index.handler
-      Runtime: nodejs14.x
-      Timeout: 60
-    DependsOn:
-      - FrontEndCognitoTriggerFunctionRole
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W89
-            reason: VPC for Lambda is not needed. This serverless architecture does not deploy a VPC.
-          - id: W92
-            reason: ReservedConcurrentExecutions is not needed for this Lambda function.
-    Condition: FrontEndCognitoSAMLCondition
+  # FrontEndCognitoTriggerFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code:
+  #       S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+  #       S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],"cognito-trigger.zip"]]
+  #     Role:
+  #       Fn::GetAtt:
+  #         - FrontEndCognitoTriggerFunctionRole
+  #         - Arn
+  #     Description: "AWS STNO Solution (v3.1.1): Cognito Trigger. Used when a new user is confirmed in the user pool to allow for custom actions to be taken"
+  #     Environment:
+  #       Variables:
+  #         LOG_LEVEL: !FindInMap [LambdaFunction, Logging, Level]
+  #         SOLUTION_ID: !FindInMap [Solution, Metrics, SolutionId]
+  #         SOLUTION_VERSION: !FindInMap [SourceCode, General, Version]
+  #     Handler: index.handler
+  #     Runtime: nodejs14.x
+  #     Timeout: 60
+  #   DependsOn:
+  #     - FrontEndCognitoTriggerFunctionRole
+  #   Metadata:
+  #     cfn_nag:
+  #       rules_to_suppress:
+  #         - id: W89
+  #           reason: VPC for Lambda is not needed. This serverless architecture does not deploy a VPC.
+  #         - id: W92
+  #           reason: ReservedConcurrentExecutions is not needed for this Lambda function.
+  #   Condition: FrontEndCognitoSAMLCondition
 
-  FrontEndCognitoTriggerFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName:
-        Ref: FrontEndCognitoTriggerFunction
-      Principal: cognito-idp.amazonaws.com
-      SourceArn:
-        Fn::GetAtt:
-          - STNOUserPool
-          - Arn
-    Condition: FrontEndCognitoSAMLCondition
+  # FrontEndCognitoTriggerFunctionPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: lambda:InvokeFunction
+  #     FunctionName:
+  #       Ref: FrontEndCognitoTriggerFunction
+  #     Principal: cognito-idp.amazonaws.com
+  #     SourceArn:
+  #       Fn::GetAtt:
+  #         - STNOUserPool
+  #         - Arn
+  #   Condition: FrontEndCognitoSAMLCondition
 
   ############################
   # UserPool Groups          #
   ############################
-  UserPoolGroupAdmin:
-    Type: AWS::Cognito::UserPoolGroup
-    Properties:
-      Description: "Admin can perform all read and write operations"
-      GroupName: "AdminGroup"
-      Precedence: 0
-      UserPoolId:
-        Ref: STNOUserPool
+  # UserPoolGroupAdmin:
+  #   Type: AWS::Cognito::UserPoolGroup
+  #   Properties:
+  #     Description: "Admin can perform all read and write operations"
+  #     GroupName: "AdminGroup"
+  #     Precedence: 0
+  #     UserPoolId:
+  #       Ref: STNOUserPool
 
-  UserPoolGroupReadOnlyUsers:
-    Type: AWS::Cognito::UserPoolGroup
-    Properties:
-      Description: "Users can only view requests"
-      GroupName: "ReadOnlyUserGroup"
-      Precedence: 1
-      UserPoolId:
-        Ref: STNOUserPool
+  # UserPoolGroupReadOnlyUsers:
+  #   Type: AWS::Cognito::UserPoolGroup
+  #   Properties:
+  #     Description: "Users can only view requests"
+  #     GroupName: "ReadOnlyUserGroup"
+  #     Precedence: 1
+  #     UserPoolId:
+  #       Ref: STNOUserPool
 
   ############################
   # UserPool User - adminuser  #
   ############################
-  UserPoolUserAdmin:
-    Type: AWS::Cognito::UserPoolUser
-    Properties:
-      Username: !Ref UserPoolUsernameForAdminUser
-      DesiredDeliveryMediums:
-        - "EMAIL"
-      UserAttributes:
-        - Name: email_verified
-          Value: 'true'
-        - Name: email
-          Value:
-            Ref: ConsoleLoginInformationEmail
-      UserPoolId:
-        Ref: STNOUserPool
+  # UserPoolUserAdmin:
+  #   Type: AWS::Cognito::UserPoolUser
+  #   Properties:
+  #     Username: !Ref UserPoolUsernameForAdminUser
+  #     DesiredDeliveryMediums:
+  #       - "EMAIL"
+  #     UserAttributes:
+  #       - Name: email_verified
+  #         Value: 'true'
+  #       - Name: email
+  #         Value:
+  #           Ref: ConsoleLoginInformationEmail
+  #     UserPoolId:
+  #       Ref: STNOUserPool
 
-  UserPoolAdminUserToAdminGroup:
-    Type: AWS::Cognito::UserPoolUserToGroupAttachment
-    Properties:
-      GroupName: "AdminGroup"
-      Username: !Ref UserPoolUsernameForAdminUser
-      UserPoolId:
-        Ref: STNOUserPool
-    DependsOn:
-    - UserPoolGroupAdmin
-    - UserPoolUserAdmin
+  # UserPoolAdminUserToAdminGroup:
+  #   Type: AWS::Cognito::UserPoolUserToGroupAttachment
+  #   Properties:
+  #     GroupName: "AdminGroup"
+  #     Username: !Ref UserPoolUsernameForAdminUser
+  #     UserPoolId:
+  #       Ref: STNOUserPool
+  #   DependsOn:
+  #   - UserPoolGroupAdmin
+  #   - UserPoolUserAdmin
 
   ############################
   # UserPool User - readonlyuser  #
   ############################
-  UserPoolUserReadOnly:
-    Type: AWS::Cognito::UserPoolUser
-    Properties:
-      Username: !Ref UserPoolUsernameForReadOnlyUser
-      DesiredDeliveryMediums:
-        - "EMAIL"
-      UserAttributes:
-        - Name: email_verified
-          Value: 'true'
-        - Name: email
-          Value:
-            Ref: ConsoleLoginInformationEmail
-      UserPoolId:
-        Ref: STNOUserPool
+  # UserPoolUserReadOnly:
+  #   Type: AWS::Cognito::UserPoolUser
+  #   Properties:
+  #     Username: !Ref UserPoolUsernameForReadOnlyUser
+  #     DesiredDeliveryMediums:
+  #       - "EMAIL"
+  #     UserAttributes:
+  #       - Name: email_verified
+  #         Value: 'true'
+  #       - Name: email
+  #         Value:
+  #           Ref: ConsoleLoginInformationEmail
+  #     UserPoolId:
+  #       Ref: STNOUserPool
 
-  UserPoolReadOnlyUserToReadOnlyGroup:
-    Type: AWS::Cognito::UserPoolUserToGroupAttachment
-    Properties:
-      GroupName: "ReadOnlyUserGroup"
-      Username: !Ref UserPoolUsernameForReadOnlyUser
-      UserPoolId:
-        Ref: STNOUserPool
-    DependsOn:
-    - UserPoolGroupReadOnlyUsers
-    - UserPoolUserReadOnly
+  # UserPoolReadOnlyUserToReadOnlyGroup:
+  #   Type: AWS::Cognito::UserPoolUserToGroupAttachment
+  #   Properties:
+  #     GroupName: "ReadOnlyUserGroup"
+  #     Username: !Ref UserPoolUsernameForReadOnlyUser
+  #     UserPoolId:
+  #       Ref: STNOUserPool
+  #   DependsOn:
+  #   - UserPoolGroupReadOnlyUsers
+  #   - UserPoolUserReadOnly
 
     ############################
   # Amazon Cognito Identity Pool #
    ############################
-  CognitoAuthRole:
-      Type: "AWS::IAM::Role"
-      Properties:
-          AssumeRolePolicyDocument:
-              Version: "2012-10-17"
-              Statement:
-                  -
-                      Effect: "Allow"
-                      Principal:
-                          Federated: "cognito-identity.amazonaws.com"
-                      Action:
-                              - "sts:AssumeRoleWithWebIdentity"
-                      Condition:
-                          StringEquals:
-                              cognito-identity.amazonaws.com:aud: !Ref IdentityPool
-                          ForAnyValue:StringLike:
-                              cognito-identity.amazonaws.com:amr: "authenticated"
-          Path: "/"
-          Policies:
-            -
-              PolicyName: STNOCognitoAuthRolePolicy
-              PolicyDocument:
-                  Version: "2012-10-17"
-                  Statement:
-                      -
-                          Effect: "Allow"
-                          Action:
-                            - "cognito-identity:GetId"
-                          Resource:
-                            - !Join ["",[!Sub "arn:${AWS::Partition}:cognito-identity:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":identitypool/", !Ref IdentityPool]]
+  # CognitoAuthRole:
+  #     Type: "AWS::IAM::Role"
+  #     Properties:
+  #         AssumeRolePolicyDocument:
+  #             Version: "2012-10-17"
+  #             Statement:
+  #                 -
+  #                     Effect: "Allow"
+  #                     Principal:
+  #                         Federated: "cognito-identity.amazonaws.com"
+  #                     Action:
+  #                             - "sts:AssumeRoleWithWebIdentity"
+  #                     Condition:
+  #                         StringEquals:
+  #                             cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+  #                         ForAnyValue:StringLike:
+  #                             cognito-identity.amazonaws.com:amr: "authenticated"
+  #         Path: "/"
+  #         Policies:
+  #           -
+  #             PolicyName: STNOCognitoAuthRolePolicy
+  #             PolicyDocument:
+  #                 Version: "2012-10-17"
+  #                 Statement:
+  #                     -
+  #                         Effect: "Allow"
+  #                         Action:
+  #                           - "cognito-identity:GetId"
+  #                         Resource:
+  #                           - !Join ["",[!Sub "arn:${AWS::Partition}:cognito-identity:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":identitypool/", !Ref IdentityPool]]
 
-  IdentityPoolRoleAttachment:
-    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
-    Properties:
-        IdentityPoolId: !Ref IdentityPool
-        Roles:
-            authenticated: !GetAtt CognitoAuthRole.Arn
+  # IdentityPoolRoleAttachment:
+  #   Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+  #   Properties:
+  #       IdentityPoolId: !Ref IdentityPool
+  #       Roles:
+  #           authenticated: !GetAtt CognitoAuthRole.Arn
 
-  IdentityPool:
-      Type: "AWS::Cognito::IdentityPool"
-      Properties:
-          AllowUnauthenticatedIdentities: false
-          CognitoIdentityProviders:
-              -
-                ClientId: !Ref UserPoolClient
-                ProviderName: !GetAtt STNOUserPool.ProviderName
-                ServerSideTokenCheck: false
+  # IdentityPool:
+  #     Type: "AWS::Cognito::IdentityPool"
+  #     Properties:
+  #         AllowUnauthenticatedIdentities: false
+  #         CognitoIdentityProviders:
+  #             -
+  #               ClientId: !Ref UserPoolClient
+  #               ProviderName: !GetAtt STNOUserPool.ProviderName
+  #               ServerSideTokenCheck: false
 
   ##########################
   # Amazon DynamoDB Role #
@@ -2584,26 +2591,26 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
-  ConsoleBucketPolicy:
-    Type: 'AWS::S3::BucketPolicy'
-    Properties:
-      Bucket: !Ref ConsoleBucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              CanonicalUser: !GetAtt ConsoleOriginAccessIdentity.S3CanonicalUserId
-            Action: 's3:GetObject'
-            Resource: !Join ["/", [!GetAtt ConsoleBucket.Arn, "*"]]
-          - Effect: Deny
-            Action: s3:*
-            Resource:
-              - !GetAtt ConsoleBucket.Arn
-              - !Join ["/", [!GetAtt ConsoleBucket.Arn, "*"]]
-            Condition:
-              Bool:
-                aws:SecureTransport: False
-            Principal: "*"
+  # ConsoleBucketPolicy:
+  #   Type: 'AWS::S3::BucketPolicy'
+  #   Properties:
+  #     Bucket: !Ref ConsoleBucket
+  #     PolicyDocument:
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             CanonicalUser: !GetAtt ConsoleOriginAccessIdentity.S3CanonicalUserId
+  #           Action: 's3:GetObject'
+  #           Resource: !Join ["/", [!GetAtt ConsoleBucket.Arn, "*"]]
+  #         - Effect: Deny
+  #           Action: s3:*
+  #           Resource:
+  #             - !GetAtt ConsoleBucket.Arn
+  #             - !Join ["/", [!GetAtt ConsoleBucket.Arn, "*"]]
+  #           Condition:
+  #             Bool:
+  #               aws:SecureTransport: False
+  #           Principal: "*"
 
   LogsBucket:
     DeletionPolicy: Retain
@@ -2645,178 +2652,178 @@ Resources:
   ##########################
   # Cloud Front #
   ##########################
-  ConsoleOriginAccessIdentity:
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
-    Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub "access-identity-${ConsoleBucket}"
+  # ConsoleOriginAccessIdentity:
+  #   Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+  #   Properties:
+  #     CloudFrontOriginAccessIdentityConfig:
+  #       Comment: !Sub "access-identity-${ConsoleBucket}"
 
-  AllowListedCidr:
-    Type: AWS::WAFv2::IPSet
-    Properties:
-      Name: STNO-Api-Allowlist
-      Scope: REGIONAL
-      Description: CIDR ranges allowed access to STNO web UI
-      IPAddressVersion: IPV4
-      Addresses: !Ref AllowListedRanges
+  # AllowListedCidr:
+  #   Type: AWS::WAFv2::IPSet
+  #   Properties:
+  #     Name: STNO-Api-Allowlist
+  #     Scope: REGIONAL
+  #     Description: CIDR ranges allowed access to STNO web UI
+  #     IPAddressVersion: IPV4
+  #     Addresses: !Ref AllowListedRanges
 
-  STNOGraphQLApiWebACL:
-    Type: AWS::WAFv2::WebACL
-    Properties:
-      Name: "STNO-Api-WebACL"
-      Scope: REGIONAL
-      DefaultAction:
-        Block: {}
-      VisibilityConfig:
-        SampledRequestsEnabled: true
-        CloudWatchMetricsEnabled: true
-        MetricName: "STNO-Api-WebACL-Metrics"
-      Rules:
-        - Name: "AllowlistRule"
-          Priority: 0
-          Action:
-            Allow: {}
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: "STNO-Api-AllowlistRuleMetric"
-          Statement:
-            IPSetReferenceStatement:
-              Arn: !GetAtt AllowListedCidr.Arn
-        - Name: "AWSManagedRules"
-          Priority: 1
-          OverrideAction:
-            None: {}
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: "STNO-Api-AWSManagedRulesMetric"
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: "AWSManagedRulesCommonRuleSet"
-              ExcludedRules: []
+  # STNOGraphQLApiWebACL:
+  #   Type: AWS::WAFv2::WebACL
+  #   Properties:
+  #     Name: "STNO-Api-WebACL"
+  #     Scope: REGIONAL
+  #     DefaultAction:
+  #       Block: {}
+  #     VisibilityConfig:
+  #       SampledRequestsEnabled: true
+  #       CloudWatchMetricsEnabled: true
+  #       MetricName: "STNO-Api-WebACL-Metrics"
+  #     Rules:
+  #       - Name: "AllowlistRule"
+  #         Priority: 0
+  #         Action:
+  #           Allow: {}
+  #         VisibilityConfig:
+  #           SampledRequestsEnabled: true
+  #           CloudWatchMetricsEnabled: true
+  #           MetricName: "STNO-Api-AllowlistRuleMetric"
+  #         Statement:
+  #           IPSetReferenceStatement:
+  #             Arn: !GetAtt AllowListedCidr.Arn
+  #       - Name: "AWSManagedRules"
+  #         Priority: 1
+  #         OverrideAction:
+  #           None: {}
+  #         VisibilityConfig:
+  #           SampledRequestsEnabled: true
+  #           CloudWatchMetricsEnabled: true
+  #           MetricName: "STNO-Api-AWSManagedRulesMetric"
+  #         Statement:
+  #           ManagedRuleGroupStatement:
+  #             VendorName: AWS
+  #             Name: "AWSManagedRulesCommonRuleSet"
+  #             ExcludedRules: []
 
-  SecurityHeaderFunction:
-    Type: AWS::CloudFront::Function
-    Properties:
-      Name: !Sub "STNO-SecurityHeaderFunction-${AWS::Region}"
-      AutoPublish: true
-      FunctionCode: |
-        function handler = (event) => {
-            const response = event.response;
-            const headers = response.headers;
+  # SecurityHeaderFunction:
+  #   Type: AWS::CloudFront::Function
+  #   Properties:
+  #     Name: !Sub "STNO-SecurityHeaderFunction-${AWS::Region}"
+  #     AutoPublish: true
+  #     FunctionCode: |
+  #       function handler = (event) => {
+  #           const response = event.response;
+  #           const headers = response.headers;
 
-            //Set new headers
-            headers['strict-transport-security'] = [{
-                key: 'Strict-Transport-Security',
-                value: 'max-age=63072000; includeSubdomains; preload'
-            }];
-            headers['x-content-type-options'] = [{key: 'X-Content-Type-Options', value: 'nosniff'}];
-            headers['x-frame-options'] = [{key: 'X-Frame-Options', value: 'DENY'}];
-            headers['x-xss-protection'] = [{key: 'X-XSS-Protection', value: '1; mode=block'}];
-            headers['referrer-policy'] = [{key: 'Referrer-Policy', value: 'same-origin'}];
+  #           //Set new headers
+  #           headers['strict-transport-security'] = [{
+  #               key: 'Strict-Transport-Security',
+  #               value: 'max-age=63072000; includeSubdomains; preload'
+  #           }];
+  #           headers['x-content-type-options'] = [{key: 'X-Content-Type-Options', value: 'nosniff'}];
+  #           headers['x-frame-options'] = [{key: 'X-Frame-Options', value: 'DENY'}];
+  #           headers['x-xss-protection'] = [{key: 'X-XSS-Protection', value: '1; mode=block'}];
+  #           headers['referrer-policy'] = [{key: 'Referrer-Policy', value: 'same-origin'}];
 
-            return response;
-          };
-      FunctionConfig:
-        Runtime: cloudfront-js-1.0
-        Comment: "Adds recommended security-related http headers to CloudFront responses"
+  #           return response;
+  #         };
+  #     FunctionConfig:
+  #       Runtime: cloudfront-js-1.0
+  #       Comment: "Adds recommended security-related http headers to CloudFront responses"
 
-  ConsoleCloudFront:
-      Type: AWS::CloudFront::Distribution
-      Metadata:
-        cfn_nag:
-          rules_to_suppress:
-            - id: W70
-              reason: Minimum protocol version property is not necessary if the distribution uses the CloudFront domain name such as d111111abcdef8.cloudfront.net
-        # Seems to be a bug with CFN Nag - adding this property didn't remove the warning.
-        # Reference: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-distribution-viewercertificate.html
-      Properties:
-          DistributionConfig:
-              Comment: "Cloud Front distribution for Serverless Transit Network Orchestrator Console"
-              Origins:
-                  -
-                    Id: S3-solution-website
-                    DomainName: !Sub "${ConsoleBucket}.s3.${AWS::Region}.amazonaws.com"
-                    OriginPath: /console
-                    S3OriginConfig:
-                        OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${ConsoleOriginAccessIdentity}"
-              DefaultCacheBehavior:
-                  TargetOriginId: S3-solution-website
-                  AllowedMethods:
-                      - GET
-                      - HEAD
-                      - OPTIONS
-                      - PUT
-                      - POST
-                      - PATCH
-                      - DELETE
-                  CachedMethods:
-                      - GET
-                      - HEAD
-                      - OPTIONS
-                  ForwardedValues:
-                      QueryString: false
-                  ViewerProtocolPolicy: redirect-to-https
-              IPV6Enabled: true
-              DefaultRootObject: "index.html"
-              CustomErrorResponses:
-                - ErrorCode: 404
-                  ResponsePagePath: "/index.html"
-                  ResponseCode: 200
-                - ErrorCode: 403
-                  ResponsePagePath: "/index.html"
-                  ResponseCode: 200
-              ViewerCertificate:
-                  CloudFrontDefaultCertificate: true
-              Enabled: true
-              HttpVersion: 'http2'
-              Logging:
-                Bucket: !Join ['',[!Ref LogsBucket,'.s3.amazonaws.com']]
-                IncludeCookies: false
-                Prefix: cloudfront_logs/
+  # ConsoleCloudFront:
+  #     Type: AWS::CloudFront::Distribution
+  #     Metadata:
+  #       cfn_nag:
+  #         rules_to_suppress:
+  #           - id: W70
+  #             reason: Minimum protocol version property is not necessary if the distribution uses the CloudFront domain name such as d111111abcdef8.cloudfront.net
+  #       # Seems to be a bug with CFN Nag - adding this property didn't remove the warning.
+  #       # Reference: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-distribution-viewercertificate.html
+  #     Properties:
+  #         DistributionConfig:
+  #             Comment: "Cloud Front distribution for Serverless Transit Network Orchestrator Console"
+  #             Origins:
+  #                 -
+  #                   Id: S3-solution-website
+  #                   DomainName: !Sub "${ConsoleBucket}.s3.${AWS::Region}.amazonaws.com"
+  #                   OriginPath: /console
+  #                   S3OriginConfig:
+  #                       OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${ConsoleOriginAccessIdentity}"
+  #             DefaultCacheBehavior:
+  #                 TargetOriginId: S3-solution-website
+  #                 AllowedMethods:
+  #                     - GET
+  #                     - HEAD
+  #                     - OPTIONS
+  #                     - PUT
+  #                     - POST
+  #                     - PATCH
+  #                     - DELETE
+  #                 CachedMethods:
+  #                     - GET
+  #                     - HEAD
+  #                     - OPTIONS
+  #                 ForwardedValues:
+  #                     QueryString: false
+  #                 ViewerProtocolPolicy: redirect-to-https
+  #             IPV6Enabled: true
+  #             DefaultRootObject: "index.html"
+  #             CustomErrorResponses:
+  #               - ErrorCode: 404
+  #                 ResponsePagePath: "/index.html"
+  #                 ResponseCode: 200
+  #               - ErrorCode: 403
+  #                 ResponsePagePath: "/index.html"
+  #                 ResponseCode: 200
+  #             ViewerCertificate:
+  #                 CloudFrontDefaultCertificate: true
+  #             Enabled: true
+  #             HttpVersion: 'http2'
+  #             Logging:
+  #               Bucket: !Join ['',[!Ref LogsBucket,'.s3.amazonaws.com']]
+  #               IncludeCookies: false
+  #               Prefix: cloudfront_logs/
 
-  ConsoleIAMPolicy:
-    Type: "AWS::IAM::Policy"
-    Properties:
-      PolicyName: "STNOConsolePolicy"
-      Roles:
-        - Ref: "StateMachineLambdaRole"
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: "Allow"
-            Action:
-              - s3:putObject
-              - s3:deleteObject
-              - s3:deleteBucket
-            Resource:
-              - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", Ref: "ConsoleBucket"]]
-              - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", Ref: "ConsoleBucket", "/*" ]]
-          -
-            Effect: "Allow"
-            Action:
-              - s3:getObject
-            Resource:
-              - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::",!FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region"]]
-              - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::",!FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region","/*"]]
+  # ConsoleIAMPolicy:
+  #   Type: "AWS::IAM::Policy"
+  #   Properties:
+  #     PolicyName: "STNOConsolePolicy"
+  #     Roles:
+  #       - Ref: "StateMachineLambdaRole"
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         -
+  #           Effect: "Allow"
+  #           Action:
+  #             - s3:putObject
+  #             - s3:deleteObject
+  #             - s3:deleteBucket
+  #           Resource:
+  #             - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", Ref: "ConsoleBucket"]]
+  #             - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", Ref: "ConsoleBucket", "/*" ]]
+  #         -
+  #           Effect: "Allow"
+  #           Action:
+  #             - s3:getObject
+  #           Resource:
+  #             - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::",!FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region"]]
+  #             - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::",!FindInMap ["SourceCode", "General", "S3Bucket"], "-", Ref: "AWS::Region","/*"]]
 
-  Console:
-    Type: "Custom::ConsoleDeploy"
-    Properties:
-      ServiceToken: !Sub ${CustomResourceLambda.Arn}
-      SrcBucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-      SrcPath: !FindInMap ["SourceCode", "General", "KeyPrefix"]
-      ConsoleBucket: !Ref ConsoleBucket
-      AwsUserPoolsId: !Ref STNOUserPool
-      AwsUserPoolsWebClientId: !Ref UserPoolClient
-      AwsCognitoIdentityPoolId: !Ref IdentityPool
-      AwsAppsyncGraphqlEndpoint: !GetAtt AppSyncPipelineApi.GraphQLUrl
-      AwsContentDeliveryBucket: !Ref ConsoleBucket
-      AwsContentDeliveryUrl: !Sub "https://${ConsoleCloudFront.DomainName}"
-      AwsCognitoDomainPrefix: !Ref CognitoDomainPrefixParameter
+  # Console:
+  #   Type: "Custom::ConsoleDeploy"
+  #   Properties:
+  #     ServiceToken: !Sub ${CustomResourceLambda.Arn}
+  #     SrcBucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+  #     SrcPath: !FindInMap ["SourceCode", "General", "KeyPrefix"]
+  #     ConsoleBucket: !Ref ConsoleBucket
+  #     AwsUserPoolsId: !Ref STNOUserPool
+  #     AwsUserPoolsWebClientId: !Ref UserPoolClient
+  #     AwsCognitoIdentityPoolId: !Ref IdentityPool
+  #     AwsAppsyncGraphqlEndpoint: !GetAtt AppSyncPipelineApi.GraphQLUrl
+  #     AwsContentDeliveryBucket: !Ref ConsoleBucket
+  #     AwsContentDeliveryUrl: !Sub "https://${ConsoleCloudFront.DomainName}"
+  #     AwsCognitoDomainPrefix: !Ref CognitoDomainPrefixParameter
 
   SendCFNParameters:
     Type: Custom::SendCFNParameters
@@ -2870,8 +2877,8 @@ Outputs:
     Value: !Ref CustomServiceLinkedRole
   TGWId:
     Value: !If [CreateNewTransitGateway, !Ref AWSTransitGateway, !Ref ExistingTransitGatewayId]
-  GlobalNetworkId:
-    Value: !If [CreateNewGlobalNetwork, !Ref GlobalNetworkSTNO, !Ref ExistingGlobalNetworkId]
+  # GlobalNetworkId:
+  #   Value: !If [CreateNewGlobalNetwork, !Ref GlobalNetworkSTNO, !Ref ExistingGlobalNetworkId]
   FlatTGWRT:
     Condition: CreateNewTransitGateway
     Value: !Ref FlatTGWRouteTable
@@ -2889,34 +2896,34 @@ Outputs:
   SolutionVersion:
     Description: Version Number
     Value: !FindInMap [SourceCode, General, Version]
-  Console:
-    Description: The link to the console
-    Value: !Sub https://${ConsoleCloudFront.DomainName}
-  ConsoleS3Bucket:
-    Description: The s3 bucket that stores the contents of the website
-    Value: !Ref ConsoleBucket
-  UserPoolClientID:
-    Description: The User Pool AppClient ID used when logging into the UserPool
-    Value: !Ref UserPoolClient
-  UserPoolID:
-    Description: The User Pool ID
-    Value: !Ref STNOUserPool
-  CognitoDomain:
-    Description: Cognito hosted domain
-    Value:
-      Fn::Join:
-        - ""
-        - - https://
-          - Ref: UserPoolDomain
-          - .auth.
-          - Ref: AWS::Region
-          - .amazoncognito.com
-  IdentityPoolID:
-    Description: The Identity Pool ID.
-    Value: !Ref IdentityPool
+  # Console:
+  #   Description: The link to the console
+  #   Value: !Sub https://${ConsoleCloudFront.DomainName}
+  # ConsoleS3Bucket:
+  #   Description: The s3 bucket that stores the contents of the website
+  #   Value: !Ref ConsoleBucket
+  # UserPoolClientID:
+  #   Description: The User Pool AppClient ID used when logging into the UserPool
+  #   Value: !Ref UserPoolClient
+  # UserPoolID:
+  #   Description: The User Pool ID
+  #   Value: !Ref STNOUserPool
+  # CognitoDomain:
+  #   Description: Cognito hosted domain
+  #   Value:
+  #     Fn::Join:
+  #       - ""
+  #       - - https://
+  #         - Ref: UserPoolDomain
+  #         - .auth.
+  #         - Ref: AWS::Region
+  #         - .amazoncognito.com
+  # IdentityPoolID:
+  #   Description: The Identity Pool ID.
+  #   Value: !Ref IdentityPool
   DynamoDBTable:
     Description: The name of the Amazon DynamoDB table containing data of network requests
     Value: !Ref DynamoDbTable
-  AppSyncAPI:
-    Description: The AppSync API
-    Value: !Ref AppSyncPipelineApi
+  # AppSyncAPI:
+  #   Description: The AppSync API
+  #   Value: !Ref AppSyncPipelineApi

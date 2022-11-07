@@ -39,6 +39,7 @@ source_dir="$template_dir/../source"
 lambda_dir="$source_dir/lambda"
 
 
+
 headline "[Init] Clean old folders"
 rm -rf $template_dist_dir
 mkdir -p $template_dist_dir
@@ -66,13 +67,14 @@ npm run build:all
 cp -R "dist/cognito-trigger.zip" $build_dist_dir
 
 headline "[Build] Lambda zips for STNO Solution"
+echo "$lambda_dir"
 cd $lambda_dir
 for microservices in */ ; do
   echo "building $microservices"
   microservice_name=$(basename $microservices)
   cd $lambda_dir/$microservice_name
   mkdir -p dist/$microservice_name
-  rsync -av $lambda_dir/.venv/lib/python3.9/site-packages/ ./dist/
+  rsync -av $lambda_dir/.venv/lib/python3.10/site-packages/ ./dist/
   cp -R lib __init__.py index.py ./dist/$microservice_name/
   if [ $microservices == 'state_machine/' ]
   then

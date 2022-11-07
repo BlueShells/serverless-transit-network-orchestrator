@@ -13,7 +13,7 @@
 # without needing an IAM role
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: (SO0058o) - The AWS CloudFormation template (Organization role) for deployment of the %SOLUTION_NAME% Solution. Version %VERSION%
+Description: (SO0058o) - The AWS CloudFormation template (Organization role) for deployment of the serverless-transit-network-orchestrator Solution. Version v3.1.1
 
 Parameters:
   HubAccount:

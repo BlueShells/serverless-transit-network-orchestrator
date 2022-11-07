@@ -22,7 +22,7 @@ class CloudWatchEvents:
         self.logger = logging.getLogger(__name__)
         self.cwe_client = boto3.client("events", config=boto3_config)
 
-    def put_permission(self, principal, event_bus_name):
+    def put_permission(self, principal, event_bus_name, partition):
         """Puts permission on CloudWatch event bus. Running it permits the specified\
             AWS account or AWS organization to put events to your account's default event bus
 
@@ -47,7 +47,7 @@ class CloudWatchEvents:
         self.logger.debug(str(log_message))
 
         try:
-            if re.match("(arn:aws:organizations:).*", principal):
+            if re.match(f"(arn:{partition}:organizations:).*", principal):
                 org_id = principal.split("/")[-1]
                 condition = {
                     "Type": "StringEquals",
@@ -80,7 +80,7 @@ class CloudWatchEvents:
             self.logger.error(str(log_message))
             raise
 
-    def remove_permission(self, principal, event_bus_name):
+    def remove_permission(self, principal, event_bus_name, partition):
         """Revokes the permission of another AWS account to be able to put events to\
              the specified event bus
 
@@ -103,7 +103,7 @@ class CloudWatchEvents:
         self.logger.debug(str(log_message))
         statement_id = (
             principal.split("/")[-1]
-            if re.match("(arn:aws:organizations:).*", principal)
+            if re.match(f"(arn:{partition}:organizations:).*", principal)
             else principal
         )
         try:
