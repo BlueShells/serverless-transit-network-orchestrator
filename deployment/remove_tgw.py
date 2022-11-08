@@ -5,16 +5,21 @@ from subprocess import check_output
 from zoneinfo import available_timezones
 from botocore.exceptions import ClientError
 from optparse import OptionParser
-import json
 import boto3
-import copy
-import re
-import logging
 import time
+import os 
 
 
 def list_tgw(client):
     response = client.describe_transit_gateways(
+        Filters=[
+        {
+            'Name': 'state',
+            'Values': [
+                'available','failed'
+            ]
+        },
+    ],
         MaxResults=123
     )
 
@@ -40,18 +45,44 @@ def delete_s3(session, delete_bucket):
             print(f"Bucket {options.bucket} does not exist in account {account_id} !!!")
         else:
             print(err)
+
 def delete_tgw(client, tgw_id):
     #1 get attach ments
     attached_vpcs = get_attached_vpc(client, tgw_id)
     #print(attached_vpcs)
-    
+    taatched_vpcs_ids = []
     for attached_vpc in attached_vpcs['TransitGatewayVpcAttachments']:
-        print("atachme",attached_vpc['TransitGatewayAttachmentId'])
+        #print("atachme",attached_vpc['TransitGatewayAttachmentId'])
+        taatched_vpcs_ids.append(attached_vpc['TransitGatewayAttachmentId'])
         #2 remove vpc attachment
         remove_attach_from_tgw(client, attached_vpc['TransitGatewayAttachmentId'])
-    response = client.delete_transit_gateway(
-        TransitGatewayId=tgw_id
+    #3 check status make sure attachment detached "Deleted"
+    while True:
+        vpc_attachement_deleted = get_attached_vpc_deletedstatus(client, taatched_vpcs_ids)
+        if vpc_attachement_deleted:
+            print("confirmed all the attachment been deleted")
+            break 
+        time.sleep(15)
+    try:        
+        response = client.delete_transit_gateway(
+            TransitGatewayId=tgw_id
+        )
+    except ClientError as err:
+        print(err)
+
+def get_attached_vpc_deletedstatus(client, vpcids):
+    result = True
+    #print(f"vpcids :{vpcids}")
+    response = client.describe_transit_gateway_vpc_attachments(
+        TransitGatewayAttachmentIds=vpcids,
+        MaxResults=123,
     )
+    for attch in response['TransitGatewayVpcAttachments']:
+        if attch['State'] != 'deleted':
+            result = False 
+            break
+
+    return result
 
 def get_attached_vpc(client, tgw_id):
     response = client.describe_transit_gateway_vpc_attachments(
@@ -68,9 +99,13 @@ def get_attached_vpc(client, tgw_id):
     return response
 
 def remove_attach_from_tgw(client, transitGatewayAttachment_id):
-    response = client.delete_transit_gateway_vpc_attachment(
-        TransitGatewayAttachmentId= transitGatewayAttachment_id
-    )
+    try:
+        print(f"trying to delete attachment: {transitGatewayAttachment_id}")
+        response = client.delete_transit_gateway_vpc_attachment(
+            TransitGatewayAttachmentId= transitGatewayAttachment_id
+        )
+    except ClientError as err:
+        print(err)
     return response
 
 if __name__ == '__main__':
@@ -104,6 +139,7 @@ if __name__ == '__main__':
         session = boto3.session.Session()
 
     nameprefix = "cn-cloudfoundation"
+    
     if options.nameprefix:
         nameprefix = options.nameprefix
 
@@ -112,6 +148,9 @@ if __name__ == '__main__':
     tgwlist = list_tgw(tgw_client)
 
     #print(tgwlist['TransitGateways'])
+    if len(tgwlist['TransitGateways']) == 0:
+        print("all the transit gateway been removed")
+        os._exit(os.EX_OK)
 
     for tgw in tgwlist['TransitGateways']:
         print(f"going to delete: {tgw['TransitGatewayArn']}")

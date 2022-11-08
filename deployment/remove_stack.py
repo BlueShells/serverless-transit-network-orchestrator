@@ -17,6 +17,7 @@ def disable_protection(client, stackname):
 def delete_stack(client, stackname):
     '''delete stack'''
     try:
+        print(f"deleting stakc {stackname}")
         response = client.delete_stack(
             StackName=stackname,
         )
@@ -44,6 +45,9 @@ if __name__ == '__main__':
 
     parser.add_option('-r','--region',  
                       help='Only use if your default aws profile is not for mgn account: [example: aws-profile-master]')
+    parser.add_option('-n','--nameprefix',  
+                      help='Please input the s3 bucket prefix')
+
     options, args = parser.parse_args()  
 
     if options.profile and options.region:
@@ -54,6 +58,10 @@ if __name__ == '__main__':
         session = boto3.session.Session(region_name=options.region)
     else:
         session = boto3.session.Session()
+
+    nameprefix = "cn-cloudfoundation"
+    if options.nameprefix:
+        nameprefix = options.nameprefix
     
     client = session.client("cloudformation")
     
@@ -63,8 +71,10 @@ if __name__ == '__main__':
 
     
     last_delete_stackname = ""
+
+
     for stack in stacks_info:
-        if stack['StackName'].startswith("cn-cloudfoundation") and 'selfstack' not in stack['StackName']:
+        if stack['StackName'].startswith(nameprefix) and 'selfstack' not in stack['StackName']:
             disable_protection(client, stack['StackName'])
             delete_stack(client, stack['StackName'])
         if 'selfstack' in stack['StackName']:
