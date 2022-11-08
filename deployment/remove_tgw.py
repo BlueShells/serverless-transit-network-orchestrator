@@ -24,27 +24,6 @@ def list_tgw(client):
     )
 
     return response
-def delete_s3(session, delete_bucket):
-
-    try:
-        s3 = session.resource('s3')
-        print(f"Removing bucket {delete_bucket}.")
-        bucket = s3.Bucket(delete_bucket)
-        print("bucket content:")
-        object_summary_iterator = bucket.objects.all()
-        for object in object_summary_iterator:
-            print(object)
-        #confirmation = input(f"Do you want to continue to remove this bucket {options.bucket}? Y/N :")
-
-        bucket.object_versions.delete()
-        # if you want to delete the now-empty bucket as well, uncomment this line:
-        bucket.delete()
-        print(f"Bucket {options.bucket} been removed successfully.")
-    except ClientError as err:
-        if err.response['Error']['Code'] == 'NoSuchBucket':
-            print(f"Bucket {options.bucket} does not exist in account {account_id} !!!")
-        else:
-            print(err)
 
 def delete_tgw(client, tgw_id):
     #1 get attach ments
@@ -69,20 +48,27 @@ def delete_tgw(client, tgw_id):
         )
     except ClientError as err:
         print(err)
+    
 
 def get_attached_vpc_deletedstatus(client, vpcids):
     result = True
     #print(f"vpcids :{vpcids}")
-    response = client.describe_transit_gateway_vpc_attachments(
-        TransitGatewayAttachmentIds=vpcids,
-        MaxResults=123,
-    )
-    for attch in response['TransitGatewayVpcAttachments']:
-        if attch['State'] != 'deleted':
-            result = False 
-            break
+    try:
+        response = client.describe_transit_gateway_vpc_attachments(
+            TransitGatewayAttachmentIds=vpcids,
+            MaxResults=123,
+        )
+        for attch in response['TransitGatewayVpcAttachments']:
+            if attch['State'] != 'deleted':
+                result = False 
+                break
+        return result
+    except ClientError as err:
+        print(err)
 
-    return result
+    
+
+    
 
 def get_attached_vpc(client, tgw_id):
     response = client.describe_transit_gateway_vpc_attachments(
@@ -148,12 +134,12 @@ if __name__ == '__main__':
     tgwlist = list_tgw(tgw_client)
 
     #print(tgwlist['TransitGateways'])
+    print(f"going to clean up all the tgw with prefix: {nameprefix}")
     if len(tgwlist['TransitGateways']) == 0:
         print("all the transit gateway been removed")
         os._exit(os.EX_OK)
 
     for tgw in tgwlist['TransitGateways']:
-        print(f"going to delete: {tgw['TransitGatewayArn']}")
         tgw_name = ""
         tags = tgw['Tags']
         print(tags)

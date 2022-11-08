@@ -30,28 +30,28 @@ Parameters:
     AllowedPattern: '(^$|^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)'
     Default: "awszzm@amazon.com"
 
-  UserPoolUsernameForAdminUser:
-    Description: Cognito UserPool ADMIN username used in the solution. The ADMIN user has full read and write permissions.
-    Default: adminuser
-    Type: String
-    MinLength: 0
-    MaxLength: 20
-    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9-_]*$'
+  # UserPoolUsernameForAdminUser:
+  #   Description: Cognito UserPool ADMIN username used in the solution. The ADMIN user has full read and write permissions.
+  #   Default: adminuser
+  #   Type: String
+  #   MinLength: 0
+  #   MaxLength: 20
+  #   AllowedPattern: '^[a-zA-Z][a-zA-Z0-9-_]*$'
 
-  UserPoolUsernameForReadOnlyUser:
-    Description: Cognito UserPool READONLY username used in the solution. The READONLY user has only read permission.
-    Default: readonlyuser
-    Type: String
-    MinLength: 0
-    MaxLength: 20
-    AllowedPattern: '^[a-zA-Z][a-zA-Z0-9-_]*$'
+  # UserPoolUsernameForReadOnlyUser:
+  #   Description: Cognito UserPool READONLY username used in the solution. The READONLY user has only read permission.
+  #   Default: readonlyuser
+  #   Type: String
+  #   MinLength: 0
+  #   MaxLength: 20
+  #   AllowedPattern: '^[a-zA-Z][a-zA-Z0-9-_]*$'
 
-  ConsoleLoginInformationEmail:
-    Description: Cognito user email where the temporary password will be sent. Please enter a valid and working email.
-    Type: String
-    MinLength: 1
-    AllowedPattern: '^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    Default: "awszzm@amazon.com"
+  # ConsoleLoginInformationEmail:
+  #   Description: Cognito user email where the temporary password will be sent. Please enter a valid and working email.
+  #   Type: String
+  #   MinLength: 1
+  #   AllowedPattern: '^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+  #   Default: "awszzm@amazon.com"
 
   AttachmentTag:
     Description: Custom tag key name to trigger the TGW VPC attachment workflow.
@@ -132,28 +132,28 @@ Parameters:
     AllowedPattern: '^((arn:aws:iam::\d{12}:role/.+)|)$'
     Default: ""
 
-  CognitoDomainPrefixParameter:
-    Type: String
-    AllowedPattern: ^$|^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
-    Description: The prefix to the Cognito hosted domain name that will be associated with the user pool.
-    Default: "zzm"
+  # CognitoDomainPrefixParameter:
+  #   Type: String
+  #   AllowedPattern: ^$|^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+  #   Description: The prefix to the Cognito hosted domain name that will be associated with the user pool.
+  #   Default: "zzm"
 
-  CognitoSAMLProviderNameParameter:
-    Type: String
-    AllowedPattern: ^[a-zA-Z]*$
-    Description: (Optional) The identity provider name.
-    MaxLength: 32
+  # CognitoSAMLProviderNameParameter:
+  #   Type: String
+  #   AllowedPattern: ^[a-zA-Z]*$
+  #   Description: (Optional) The identity provider name.
+  #   MaxLength: 32
 
-  CognitoSAMLProviderMetadataUrlParameter:
-    Type: String
-    Description: (Optional) MetadataURL for the identity provider details.
+  # CognitoSAMLProviderMetadataUrlParameter:
+  #   Type: String
+  #   Description: (Optional) MetadataURL for the identity provider details.
 
-  AllowListedRanges:
-    Type: CommaDelimitedList
-    Description: |
-      Comma separated list of CIDR ranges that allow to console to access the API.
-      To allow all the entire internet, use 0.0.0.0/1,128.0.0.0/1
-    Default: "0.0.0.0/1"
+  # AllowListedRanges:
+  #   Type: CommaDelimitedList
+  #   Description: |
+  #     Comma separated list of CIDR ranges that allow to console to access the API.
+  #     To allow all the entire internet, use 0.0.0.0/1,128.0.0.0/1
+  #   Default: "0.0.0.0/1"
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -164,32 +164,32 @@ Metadata:
           - PrincipalType
           - Principals
           - OrganizationManagementAccountRoleArn
-      - Label:
-          default: Web UI Security Settings
-        Parameters:
-          - AllowListedRanges
+      # - Label:
+      #     default: Web UI Security Settings
+      #   Parameters:
+      #     - AllowListedRanges
       - Label:
           default: Notification Settings
         Parameters:
           - ApprovalNotification
           - ApprovalNotificationEmail
-      - Label:
-          default: User Settings
-        Parameters:
-          - ConsoleLoginInformationEmail
-          - UserPoolUsernameForAdminUser
-          - UserPoolUsernameForReadOnlyUser
+      # - Label:
+      #     default: User Settings
+      #   Parameters:
+      #     - ConsoleLoginInformationEmail
+      #     - UserPoolUsernameForAdminUser
+      #     - UserPoolUsernameForReadOnlyUser
       - Label:
           default: Transit Gateway Settings
         Parameters:
           - ExistingTransitGatewayId
           - ExistingGlobalNetworkId
-      - Label:
-          default: Amazon Cognito Configuration
-        Parameters:
-          - CognitoDomainPrefixParameter
-          - CognitoSAMLProviderNameParameter
-          - CognitoSAMLProviderMetadataUrlParameter
+      # - Label:
+      #     default: Amazon Cognito Configuration
+      #   Parameters:
+      #     - CognitoDomainPrefixParameter
+      #     - CognitoSAMLProviderNameParameter
+      #     - CognitoSAMLProviderMetadataUrlParameter
       - Label:
           default: VPC Route Table Settings
         Parameters:
@@ -214,12 +214,12 @@ Metadata:
         default: Approval Notification Email
       ApprovalNotification:
         default: Receive Approval Notifications
-      ConsoleLoginInformationEmail:
-        default: Console Login Information Email
-      UserPoolUsernameForAdminUser:
-        default: Admin Username
-      UserPoolUsernameForReadOnlyUser:
-        default: Read-Only Username
+      # ConsoleLoginInformationEmail:
+      #   default: Console Login Information Email
+      # UserPoolUsernameForAdminUser:
+      #   default: Admin Username
+      # UserPoolUsernameForReadOnlyUser:
+      #   default: Read-Only Username
       DefaultRoute:
         default: Choose the type of destination for target Transit Gateway
       AttachmentTag:
@@ -242,12 +242,12 @@ Metadata:
         default: (Optional) Comma separated list of VPC tag keys to copy from VPC to TGW Attachments
       OrganizationManagementAccountRoleArn:
         default: (Optional) IAM Role ARN of Management Account
-      CognitoDomainPrefixParameter:
-        default: Cognito Domain Prefix
-      CognitoSAMLProviderNameParameter:
-        default: SAML Provider Name
-      CognitoSAMLProviderMetadataUrlParameter:
-        default: SAML Provider Metadata URL
+      # CognitoDomainPrefixParameter:
+      #   default: Cognito Domain Prefix
+      # CognitoSAMLProviderNameParameter:
+      #   default: SAML Provider Name
+      # CognitoSAMLProviderMetadataUrlParameter:
+      #   default: SAML Provider Metadata URL
 
 
 
@@ -262,16 +262,16 @@ Conditions:
     - !Condition CreateNewTransitGateway
   ProvidedPrefixListIds: !Not [!Equals [!Ref CustomerManagedPrefixListIds, '']]
   OrganizationManagementAccountRoleArn: !Not [ !Equals [!Ref OrganizationManagementAccountRoleArn, '']]
-  FrontEndCognitoSAMLCondition:
-    Fn::And:
-      - Fn::Not:
-          - Fn::Equals:
-              - Ref: CognitoSAMLProviderNameParameter
-              - ""
-      - Fn::Not:
-          - Fn::Equals:
-              - Ref: CognitoSAMLProviderMetadataUrlParameter
-              - ""
+  # FrontEndCognitoSAMLCondition:
+  #   Fn::And:
+  #     - Fn::Not:
+  #         - Fn::Equals:
+  #             - Ref: CognitoSAMLProviderNameParameter
+  #             - ""
+  #     - Fn::Not:
+  #         - Fn::Equals:
+  #             - Ref: CognitoSAMLProviderMetadataUrlParameter
+  #             - ""
 
 Mappings:
   NetworkConfiguration:

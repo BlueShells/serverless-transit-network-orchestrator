@@ -72,7 +72,7 @@ if __name__ == '__main__':
     
     last_delete_stackname = ""
 
-
+    print(f"going to clean up all the stack with prefix: {nameprefix}")
     for stack in stacks_info:
         if stack['StackName'].startswith(nameprefix) and 'selfstack' not in stack['StackName']:
             disable_protection(client, stack['StackName'])

@@ -13,7 +13,10 @@ import time
 
 
 def list_s3(client):
-    response = client.list_buckets()
+    try:
+        response = client.list_buckets()
+    except ClientError as err:
+        print(err)
     return response
 def delete_s3(session, delete_bucket):
 
@@ -87,7 +90,9 @@ if __name__ == '__main__':
     account_id = session.client("sts").get_caller_identity()["Account"]
 
     s3list = list_s3(session.client("s3"))
+    print(f"get all the s3 from current account {options.profile}")
     print(s3list['Buckets'])
+    print(f"start clean s3 with prefix: {nameprefix}")
     for d_buckt in s3list['Buckets']:
         if d_buckt['Name'].startswith(nameprefix):
             delete_s3(session, d_buckt['Name'])
