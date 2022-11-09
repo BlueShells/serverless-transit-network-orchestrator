@@ -16,19 +16,19 @@ Parameters:
       - 'AWS Organization ARN'
       - 'List of Accounts'
 
-  ApprovalNotification:
-    Description: Do you want to send notification to the Network Admin for approval?
-    AllowedValues:
-      - 'Yes'
-      - 'No'
-    Default: 'No'
-    Type: String
+  # ApprovalNotification:
+  #   Description: Do you want to send notification to the Network Admin for approval?
+  #   AllowedValues:
+  #     - 'Yes'
+  #     - 'No'
+  #   Default: 'No'
+  #   Type: String
 
-  ApprovalNotificationEmail:
-    Type: 'String'
-    Description: Email for the network administrator(s)
-    AllowedPattern: '(^$|^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)'
-    Default: "awszzm@amazon.com"
+  # ApprovalNotificationEmail:
+  #   Type: 'String'
+  #   Description: Email for the network administrator(s)
+  #   AllowedPattern: '(^$|^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)'
+  #   Default: "awszzm@amazon.com"
 
   # UserPoolUsernameForAdminUser:
   #   Description: Cognito UserPool ADMIN username used in the solution. The ADMIN user has full read and write permissions.
@@ -168,11 +168,11 @@ Metadata:
       #     default: Web UI Security Settings
       #   Parameters:
       #     - AllowListedRanges
-      - Label:
-          default: Notification Settings
-        Parameters:
-          - ApprovalNotification
-          - ApprovalNotificationEmail
+      # - Label:
+      #     default: Notification Settings
+      #   Parameters:
+      #     - ApprovalNotification
+      #     - ApprovalNotificationEmail
       # - Label:
       #     default: User Settings
       #   Parameters:
@@ -210,10 +210,10 @@ Metadata:
         default: Account List or AWS Organizations ARN
       PrincipalType:
         default: Principal Type
-      ApprovalNotificationEmail:
-        default: Approval Notification Email
-      ApprovalNotification:
-        default: Receive Approval Notifications
+      # ApprovalNotificationEmail:
+      #   default: Approval Notification Email
+      # ApprovalNotification:
+      #   default: Receive Approval Notifications
       # ConsoleLoginInformationEmail:
       #   default: Console Login Information Email
       # UserPoolUsernameForAdminUser:
@@ -252,7 +252,7 @@ Metadata:
 
 
 Conditions:
-  NotificationCondition: !Equals [!Ref ApprovalNotification, 'Yes']
+  NotificationCondition: !Equals ['F', 'NowayThisistrue']
   IsMemberOfOrganization: !Equals [!Ref PrincipalType, 'AWS Organization ARN']
   IsNotMemberOfOrganization: !Equals [!Ref PrincipalType, 'List of Accounts']
   CreateNewTransitGateway: !Equals [!Ref ExistingTransitGatewayId, '']
@@ -391,9 +391,9 @@ Resources:
         -
           Key: StackId
           Value: !Ref AWS::StackId
-        -
-          Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
-          Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
+        # -
+        #   Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
+        #   Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
 
   OnPremTGWRouteTable:
     Type: AWS::EC2::TransitGatewayRouteTable
@@ -409,9 +409,9 @@ Resources:
         -
           Key: StackId
           Value: !Ref AWS::StackId
-        -
-          Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
-          Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
+        # -
+        #   Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
+        #   Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
 
   IsolatedTGWRouteTable:
     Type: AWS::EC2::TransitGatewayRouteTable
@@ -424,9 +424,9 @@ Resources:
         -
           Key: Name
           Value: Isolated
-        -
-          Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
-          Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
+        # -
+        #   Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
+        #   Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
 
   InfrastructureTGWRouteTable:
     Type: AWS::EC2::TransitGatewayRouteTable
@@ -442,9 +442,9 @@ Resources:
         -
           Key: StackId
           Value: !Ref AWS::StackId
-        -
-          Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
-          Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
+        # -
+        #   Key: !FindInMap ["SourceCode", "Variables", "ApprovalTagKey"]
+        #   Value: !FindInMap ["SourceCode", "Variables", "ApprovalTagValue"]
 
   TGWResourceShare:
     DependsOn:
@@ -482,58 +482,58 @@ Resources:
         - Key: AWS Serverless Transit Network Orchestrator
           Value: !Ref 'AWS::StackId'
 
-  ApprovalTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      DisplayName: !FindInMap [NotificationConfiguration ,SNS ,DisplayName]
-      TopicName: !FindInMap [NotificationConfiguration ,SNS ,TopicName]
-      KmsMasterKeyId: alias/aws/sns
+  # ApprovalTopic:
+  #   Type: AWS::SNS::Topic
+  #   Properties:
+  #     DisplayName: !FindInMap [NotificationConfiguration ,SNS ,DisplayName]
+  #     TopicName: !FindInMap [NotificationConfiguration ,SNS ,TopicName]
+  #     KmsMasterKeyId: alias/aws/sns
 
-  NetworkAdminEmailNotification:
-    Condition: NotificationCondition
-    Type: AWS::SNS::Subscription
-    Properties:
-      Endpoint: !Ref ApprovalNotificationEmail
-      Protocol: email
-      TopicArn: !Ref ApprovalTopic
+  # NetworkAdminEmailNotification:
+  #   Condition: NotificationCondition
+  #   Type: AWS::SNS::Subscription
+  #   Properties:
+  #     Endpoint: !Ref ApprovalNotificationEmail
+  #     Protocol: email
+  #     TopicArn: !Ref ApprovalTopic
 
-  SNSNotificationPolicy:
-    Type: AWS::SNS::TopicPolicy
-    Properties:
-      Topics:
-        - !Ref ApprovalTopic
-      PolicyDocument:
-        Statement:
-          - Sid: __default_statement_ID
-            Effect: Allow
-            Principal:
-              AWS: !Sub ${AWS::AccountId}
-            Action:
-            - SNS:GetTopicAttributes
-            - SNS:SetTopicAttributes
-            - SNS:AddPermission
-            - SNS:RemovePermission
-            - SNS:DeleteTopic
-            - SNS:Subscribe
-            - SNS:ListSubscriptionsByTopic
-            - SNS:Publish
-            - SNS:Receive
-            Resource: !Ref ApprovalTopic
-          - Sid: TrustCWEToPublishEventsToMyTopic
-            Effect: Allow
-            Principal:
-              Service: events.amazonaws.com
-            Action: sns:Publish
-            Resource: !Ref ApprovalTopic
-          - Sid: AllowPublishThroughSSLOnly
-            Effect: Deny
-            Principal: "*"
-            Action:
-            - SNS:Publish
-            Resource: !Ref ApprovalTopic
-            Condition:
-              Bool:
-                aws:SecureTransport: False
+  # SNSNotificationPolicy:
+  #   Type: AWS::SNS::TopicPolicy
+  #   Properties:
+  #     Topics:
+  #       - !Ref ApprovalTopic
+  #     PolicyDocument:
+  #       Statement:
+  #         - Sid: __default_statement_ID
+  #           Effect: Allow
+  #           Principal:
+  #             AWS: !Sub ${AWS::AccountId}
+  #           Action:
+  #           - SNS:GetTopicAttributes
+  #           - SNS:SetTopicAttributes
+  #           - SNS:AddPermission
+  #           - SNS:RemovePermission
+  #           - SNS:DeleteTopic
+  #           - SNS:Subscribe
+  #           - SNS:ListSubscriptionsByTopic
+  #           - SNS:Publish
+  #           - SNS:Receive
+  #           Resource: !Ref ApprovalTopic
+  #         - Sid: TrustCWEToPublishEventsToMyTopic
+  #           Effect: Allow
+  #           Principal:
+  #             Service: events.amazonaws.com
+  #           Action: sns:Publish
+  #           Resource: !Ref ApprovalTopic
+  #         - Sid: AllowPublishThroughSSLOnly
+  #           Effect: Deny
+  #           Principal: "*"
+  #           Action:
+  #           - SNS:Publish
+  #           Resource: !Ref ApprovalTopic
+  #           Condition:
+  #             Bool:
+  #               aws:SecureTransport: False
 
   # For spoke accounts:
   LambdaEventRuleSpokeAccounts:
@@ -809,22 +809,22 @@ Resources:
                   - events:RemovePermission
                   - events:PutPermission
                 Resource: !Sub ${STNOCustomEventBus.Arn}
-        - PolicyName: STNO-S3-Policy
-          PolicyDocument: 
-            Version: '2012-10-17'
-            Statement:
-              - Effect: "Allow"
-                Action:
-                  - "s3:PutObject"
-                Resource:
-                  - !Sub ${ConsoleBucket.Arn}
-                  - !Sub ${ConsoleBucket.Arn}/*
-              - Effect: "Allow"
-                Action:
-                  - "s3:GetObject"
-                Resource:
-                  - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::AccountId", "-", !Ref "AWS::Region"]]
-                  - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::AccountId", "-", !Ref "AWS::Region", "/*"]]
+        # - PolicyName: STNO-S3-Policy
+        #   PolicyDocument: 
+        #     Version: '2012-10-17'
+        #     Statement:
+        #       - Effect: "Allow"
+        #         Action:
+        #           - "s3:PutObject"
+        #         Resource:
+        #           - !Sub ${ConsoleBucket.Arn}
+        #           - !Sub ${ConsoleBucket.Arn}/*
+        #       - Effect: "Allow"
+        #         Action:
+        #           - "s3:GetObject"
+        #         Resource:
+        #           - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::AccountId", "-", !Ref "AWS::Region"]]
+        #           - !Join ["", [!Sub "arn:${AWS::Partition}:s3:::", !FindInMap ["SourceCode", "General", "S3Bucket"], "-", !Ref "AWS::AccountId", "-", !Ref "AWS::Region", "/*"]]
   
   PolicyIAMEC2:
     Type: AWS::IAM::Policy
@@ -873,19 +873,19 @@ Resources:
               - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:*:subnet/*
               - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:*:route-table/*
 
-  PolicySNS:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: STNO-SNSPolicy
-      Roles: 
-        - !Ref StateMachineLambdaRole
-      PolicyDocument: 
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action: sns:Publish
-            Resource: 
-              - !Ref ApprovalTopic
+  # PolicySNS:
+  #   Type: AWS::IAM::Policy
+  #   Properties:
+  #     PolicyName: STNO-SNSPolicy
+  #     Roles: 
+  #       - !Ref StateMachineLambdaRole
+  #     PolicyDocument: 
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Action: sns:Publish
+  #           Resource: 
+  #             - !Ref ApprovalTopic
 
   CreateUUID:
     Type: "Custom::CreateUUID"
@@ -928,8 +928,8 @@ Resources:
       Environment:
         Variables:
           LOG_LEVEL: !FindInMap [LambdaFunction, Logging, Level]
-          APPROVAL_NOTIFICATION: !Ref ApprovalNotification
-          APPROVAL_NOTIFICATION_ARN: !Ref ApprovalTopic
+          APPROVAL_NOTIFICATION: "No"
+          #APPROVAL_NOTIFICATION_ARN: "NotopicIdarn"
           TGW_ID: !If [CreateNewTransitGateway, !Ref AWSTransitGateway, !Ref ExistingTransitGatewayId]
           TABLE_NAME: !Ref DynamoDbTable
           ASSOCIATION_TAG: !Ref AssociationTag
@@ -2571,25 +2571,25 @@ Resources:
   ##########################
   # S3 Bucket #
   ##########################
-  ConsoleBucket:
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Type: 'AWS::S3::Bucket'
-    Properties:
-      LoggingConfiguration:
-        DestinationBucketName: !Ref LogsBucket
-        LogFilePrefix: console_logs/
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: True
-        BlockPublicPolicy: True
-        IgnorePublicAcls: True
-        RestrictPublicBuckets: True
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      VersioningConfiguration:
-        Status: Enabled
+  # ConsoleBucket:
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
+  #   Type: 'AWS::S3::Bucket'
+  #   Properties:
+  #     LoggingConfiguration:
+  #       DestinationBucketName: !Ref LogsBucket
+  #       LogFilePrefix: console_logs/
+  #     PublicAccessBlockConfiguration:
+  #       BlockPublicAcls: True
+  #       BlockPublicPolicy: True
+  #       IgnorePublicAcls: True
+  #       RestrictPublicBuckets: True
+  #     BucketEncryption:
+  #       ServerSideEncryptionConfiguration:
+  #         - ServerSideEncryptionByDefault:
+  #             SSEAlgorithm: AES256
+  #     VersioningConfiguration:
+  #       Status: Enabled
 
   # ConsoleBucketPolicy:
   #   Type: 'AWS::S3::BucketPolicy'
@@ -2830,7 +2830,7 @@ Resources:
     Properties:
       Uuid: !GetAtt CreateUUID.UUID
       PrincipalType: !Ref PrincipalType
-      ApprovalNotification: !Ref ApprovalNotification
+      ApprovalNotification: "No"
       AuditTrailRetentionPeriod: !FindInMap ["LogRetention", "AuditTrail", "RetentionPeriod"]
       DefaultRoute: !Ref DefaultRoute
       CreatedNewTransitGateway: !If [CreateNewTransitGateway, 'Yes', 'No']
